@@ -1,10 +1,13 @@
 import re
 import time
+import logging
 from dataclasses import dataclass
 
 from module.conf import TMDB_API
 from module.network import RequestContent
 from module.utils import save_image
+
+logger = logging.getLogger(__name__)
 
 TMDB_URL = "https://api.themoviedb.org"
 
@@ -85,14 +88,22 @@ def tmdb_parser(title, language, test: bool = False) -> TMDBInfo | None:
             original_title = info_content.get("original_name")
             official_title = info_content.get("name")
             year_number = info_content.get("first_air_date").split("-")[0]
+            
+            poster_link = None
             if poster_path:
                 if not test:
-                    img = req.get_content(f"https://image.tmdb.org/t/p/w780{poster_path}")
-                    poster_link = save_image(img, "jpg")
+                    try:
+                        img_url = f"https://image.tmdb.org/t/p/w780{poster_path}"
+                        img = req.get_content(img_url)
+                        if img:
+                            poster_link = save_image(img, "jpg")
+                        else:
+                            logger.warning(f"Failed to download TMDB image: {img_url}")
+                    except Exception as e:
+                        logger.error(f"Failed to save TMDB image: {e}")
                 else:
                     poster_link = "https://image.tmdb.org/t/p/w780" + poster_path
-            else:
-                poster_link = None
+
             return TMDBInfo(
                 id,
                 official_title,
