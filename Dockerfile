@@ -1,6 +1,7 @@
 # syntax=docker/dockerfile:1
 
-FROM ghcr.io/astral-sh/uv:0.5-python3.13-alpine AS builder
+FROM python:3.13-alpine AS builder
+COPY --from=ghcr.io/astral-sh/uv:0.5 /uv /bin/uv
 
 WORKDIR /app
 ENV UV_COMPILE_BYTECODE=1
@@ -47,3 +48,4 @@ EXPOSE 7892
 VOLUME ["/app/config", "/app/data"]
 
 ENTRYPOINT ["tini", "-g", "--", "/entrypoint.sh"]
+CMD ["/app/.venv/bin/python", "main.py"]
