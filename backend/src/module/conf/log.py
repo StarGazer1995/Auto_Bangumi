@@ -1,4 +1,5 @@
 import logging
+from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
 from .config import settings
@@ -25,9 +26,12 @@ def setup_logger(level: int = logging.INFO, reset: bool = False):
         datefmt=TIME_FORMAT,
         encoding="utf-8",
         handlers=[
-            logging.FileHandler(LOG_PATH, encoding="utf-8"),
+            RotatingFileHandler(
+                LOG_PATH, encoding="utf-8", maxBytes=5 * 1024 * 1024, backupCount=2
+            ),
             logging.StreamHandler(),
         ],
+        force=True,
     )
 
     # Suppress verbose HTTP request logs from httpx

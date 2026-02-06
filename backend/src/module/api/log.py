@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from fastapi.responses import JSONResponse
+from starlette.concurrency import run_in_threadpool
 
 from module.conf import LOG_PATH
 from module.models import APIResponse
@@ -8,11 +9,23 @@ from module.security.api import UNAUTHORIZED, get_current_user
 router = APIRouter(prefix="/log", tags=["log"])
 
 
-@router.get("", response_model=str, dependencies=[Depends(get_current_user)])
-async def get_log():
+def _read_log_file():
     if LOG_PATH.exists():
         with open(LOG_PATH, "rb") as f:
-            return Response(f.read(), media_type="text/plain")
+            f.seek(0, 2)  # Move to the end of the file
+            file_size = f.tell()
+            # Read last 1MB or the whole file if it's smaller
+            read_size = min(file_size, 1024 * 1024)
+            f.seek(file_size - read_size)
+            return f.read(read_size)
+    return None
+
+
+@router.get("", response_model=str, dependencies=[Depends(get_current_user)])
+async def get_log():
+    data = await run_in_threadpool(_read_log_file)
+    if data is not None:
+        return Response(data, media_type="text/plain")
     else:
         return Response("Log file not found", status_code=404)
 

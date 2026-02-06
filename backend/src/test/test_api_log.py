@@ -109,6 +109,24 @@ class TestGetLog:
         assert "Second entry" in response.text
         assert "Third entry" in response.text
 
+    def test_get_log_tail_limit(self, authed_client, temp_log_file):
+        """GET /log returns only the last 1MB for large files."""
+        # Create content larger than 1MB: "PREFIX" + >1MB padding + "SUFFIX"
+        padding_size = 1024 * 1024 + 100  # 1MB + 100 bytes
+        content = b"PREFIX" + b"x" * padding_size + b"SUFFIX"
+
+        with open(temp_log_file, "wb") as f:
+            f.write(content)
+
+        with patch("module.api.log.LOG_PATH", temp_log_file):
+            response = authed_client.get("/api/v1/log")
+
+        assert response.status_code == 200
+        text = response.text
+        assert "SUFFIX" in text
+        assert "PREFIX" not in text
+        assert len(text) == 1024 * 1024
+
 
 # ---------------------------------------------------------------------------
 # GET /log/clear
